@@ -1,0 +1,5 @@
+nltk==3.5
+requests==2.25.0
+exdown==0.7.1
+scikit-learn==0.23.2
+pyenchant==3.1.1
