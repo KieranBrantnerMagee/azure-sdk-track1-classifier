@@ -1,0 +1,95 @@
+Skip to main content
+Search
+
+Sign in
+Docs  .NET
+Search
+Filter by title
+Azure for .NET developers
+Introduction to Azure and .NET
+Developer tools
+Authentication
+Logging
+Packages
+SDK example
+API reference
+Azure Service Bus libraries for .NET
+10/19/2017
+2 minutes to read
+
+
+
+Overview
+Azure Service Bus is a messaging infrastructure that sits between applications allowing them to exchange messages for improved scale and resiliency.
+
+Client library
+Install the NuGet package directly from the Visual Studio Package Manager console.
+
+Visual Studio Package Manager
+PowerShell
+
+Copy
+Install-Package Microsoft.Azure.ServiceBus
+Code Example
+This example sends a message to a Service Bus queue.
+
+C#
+
+Copy
+// using Microsoft.Azure.ServiceBus;
+// Microsoft.Azure.ServiceBus 2.0.0 (stable)
+
+byte[] messageBody = System.Text.Encoding.Unicode.GetBytes("Hello, world!");
+ServiceBusConnectionStringBuilder builder = new ServiceBusConnectionStringBuilder(connectionString);
+QueueClient client = new QueueClient(builder, ReceiveMode.PeekLock);
+client.SendAsync(new Message(messageBody));
+
+Management library
+Install the NuGet package directly from the Visual Studio Package Manager console or with the .NET Core CLI.
+
+Visual Studio Package Manager
+PowerShell
+
+Copy
+Install-Package Microsoft.Azure.Management.ServiceBus.Fluent
+.NET Core CLI
+.NET Core CLI
+
+Copy
+dotnet add package Microsoft.Azure.Management.ServiceBus.Fluent
+Code Example
+This example creates a Service Bus queue with a maximum size of 1024 MB.
+
+C#
+
+Copy
+// using Microsoft.Azure.Management.ServiceBus.Fluent;
+// using Microsoft.Azure.Management.ServiceBus.Fluent.Models;
+
+using (ServiceBusManagementClient client = new ServiceBusManagementClient(credentials))
+{
+    client.SubscriptionId = subscriptionId;
+    QueueInner parameters = new QueueInner
+    {
+        MaxSizeInMegabytes = 1024
+    };
+    await client.Queues.CreateOrUpdateAsync(resourceGroupName, namespaceName, queueName, parameters);
+}
+
+Samples
+Service Bus Queue Basics - .Net
+Service Bus Queue Advanced Features - .Net
+Service Bus Publish/Subscribe Basics - .Net
+Service Bus Publish/Subscribe Advanced Features - .Net
+Service Bus with Claims-Based Authorization - .Net
+View the complete list of Azure Service Bus samples.
+
+Is this page helpful?
+ Yes  No
+In this article
+Overview
+Client library
+Management library
+Samples
+English (United States)
+Previous Version Docs Blog Contribute Privacy & Cookies Terms of Use Site Feedback Trademarks © Microsoft 2020

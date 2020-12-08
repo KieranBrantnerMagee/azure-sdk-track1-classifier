@@ -1,5 +1,8 @@
-from helpers import *
-from constants import Language
+from collections import defaultdict
+
+from nltk.tokenize import WordPunctTokenizer
+
+from .constants import Language
 
 def tokenize_apistubgen(stub_json):
     # Ingest top level types.  May duplicate lower data, but is much more to-the-point.
@@ -81,7 +84,7 @@ def tokenize_apistubgen(stub_json):
     return found_types
 
 
-tokenizer = WordPunctTokenizer() # NOTE: This is somewhat arbitrary outside it being convenient and giving acceptable punctuation handling for our needs.
+_tokenizer = WordPunctTokenizer() # NOTE: This is somewhat arbitrary outside it being convenient and giving acceptable punctuation handling for our needs.
 def tokenize_text(text:str) -> set:
-    return set(tokenizer.tokenize(text)) # Contemplated things like occurence filtering and the like, but this "seems workable" for the time being, if we added that we should go all the way to feature vectors and a full classifier.
+    return set(_tokenizer.tokenize(text)) # Contemplated things like occurence filtering and the like, but this "seems workable" for the time being, if we added that we should go all the way to feature vectors and a full classifier.
 
