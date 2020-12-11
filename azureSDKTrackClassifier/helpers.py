@@ -15,11 +15,13 @@ from sklearn.model_selection import cross_val_score
 from .constants import Language, LANGUAGE_REPO_MAP
 from .tokenizers import tokenize_text
 
+
 def get_extension(name:str):
     try:
         return name.lower().split('/')[-1].split('.')[1]
     except:
         return None
+
 
 def is_acceptable_extension(name:str):
     if name:
@@ -27,6 +29,7 @@ def is_acceptable_extension(name:str):
         if extension in ('cs', 'py', 'ipynb', 'java', 'js', 'ts', 'md', 'txt', 'yaml'):
             return extension
     return None
+
 
 def is_code(contents:str, name:str=None):
     # Determines if a file contains code or not. (Or at least, one of the languages we recognize)
@@ -40,15 +43,27 @@ def is_code(contents:str, name:str=None):
     except KeyError as e:
         return False
 
+
 def is_yaml(contents:str, name:str=None):
     if name:
         return name.lower().endswith('.yaml')
     return False
 
+
 def is_markdown(contents:str, name:str=None):
     if name:
         return name.lower().endswith('.md')
     return False
+
+
+_DICTIONARY = enchant.Dict("en_US")
+def check_in_english_dictionary(word:str) -> bool:
+    try:
+        return _DICTIONARY.check(word)
+    except Exception as e:
+        logging.getLogger(__name__).warning("Warning: Exception while checking english dictionary for string '{}': {}".format(word, e))
+        return False
+
 
 @lru_cache
 def get_release_metadata(language:Language):
@@ -64,9 +79,16 @@ def get_release_metadata(language:Language):
             info[row['ServiceName']] = [row]
     return info
 
+
 CACHE_BASE="Z:\\scratch\\" # "." #TODO: Swap this back in.
-def get_corpus_for_package(repo:str, package:str, version:str, custom_repo_uri:str=None, use_cache:bool=False, use_raw_corpus_cache:bool=False):
+def get_corpus_for_package(repo:str, package:str, version:str, custom_repo_uri:str=None, use_cache:bool=True, use_raw_corpus_cache:bool=False) -> dict:
+    """Fetches a dict of 'public interface code' files (samples, tests, readme, representative samples you'd see in public documentation) from a specified
+    repo, package, and version. (for Azure SDK packages on github)."""
     corpus = {}
+
+    if not package or not version:
+        logging.getLogger(__name__).warning("Cannot fetch corpus for null package ({})/version ({}) for {} (custom_repo_uri:{})".format(package, version, repo, custom_repo_uri))
+        return {}
 
     if use_cache:
         cache_name = CACHE_BASE + "trimmed_corpus_{}_{}_{}.cache".format(repo, package.replace('/', '_'), version) # The replace is for JS packages.
@@ -78,18 +100,24 @@ def get_corpus_for_package(repo:str, package:str, version:str, custom_repo_uri:s
             pass
 
     package_zip_uri = "https://github.com/Azure/{}/archive/{}_{}.zip".format(repo, package, version)
-    if custom_repo_uri:
+    if custom_repo_uri == 'NA':
+        custom_repo_uri = None
+    # NOTE: This assumes all repos are github.
+    if custom_repo_uri: # TODO: Is this check safe given the filters above?  (meant to catch the 'NAs' in some release metadata, such as dotnet.)
+        logging.getLogger(__name__).info("Using custom repository URI: {}".format(custom_repo_uri))
         try:
-            base_uri, custom_subpath = custom_repo_uri.split('/tree/') # There's no way to get a zip for a subfolder, so we have to get the whole repo then filter by the intended path.
-            package_zip_uri = "{}/archive/master.zip".format(base_uri)
+            package_zip_uri, custom_subpath = get_zip_uri_and_subpath_from_github_link(custom_repo_uri) # Parse the raw link into a downloadable zip, and the subpath we need to extract from it.
+
+            logging.getLogger(__name__).info("Successfully converted custom repository URI into package zip: {} (custom_subpath: {})".format(package_zip_uri, custom_subpath))
+
         except Exception as e:
             logging.getLogger(__name__).warning("Warning: Exception while parsing custom_repo_uri: {}".format(e))
+            custom_repo_uri = None # Something went wrong, so let's _try_ to fall back to the normal pattern, and report the warning for diagnosis in either case.
 
     # Attempt to get custom repo uri + version from releases.
-    # maybe go up a level and look for "tests" and "Samples" if nothing in local dir?
-
+    # TODO: maybe go up a directory level and look for "tests" and "Samples" if nothing in local dir?  May be more trouble than worth in the long run, apistubgen may be better for the one-offs that are structured this weird, but worth keeping in mind.
     logging.getLogger(__name__).info("Fetching {} {} {}".format(repo, package, version))
-    # So that in testing we don't take ages.
+    # So that in testing we don't take ages, cache intermediate results.
     if use_raw_corpus_cache:
         raw_cache_name = CACHE_BASE + "corpus_{}_{}_{}.cache".format(repo, package.replace('/', '_'), version) # The replace is for JS packages.
         try:
@@ -103,7 +131,7 @@ def get_corpus_for_package(repo:str, package:str, version:str, custom_repo_uri:s
     else:
         version_zip = requests.get(package_zip_uri).content
 
-    if version_zip == b'404: Not Found':
+    if version_zip == b'404: Not Found': # This is a github-ism.
         logging.getLogger(__name__).warning("No zip for URI: {}".format(package_zip_uri))
         corpus = {}
     else:
@@ -112,7 +140,9 @@ def get_corpus_for_package(repo:str, package:str, version:str, custom_repo_uri:s
                         if not n.endswith('/') \
                             and is_acceptable_extension(n) \
                             and ((custom_repo_uri and custom_subpath in n) or (not custom_repo_uri and '/sdk/' in n and package in n.split('/sdk/')[-1])) \
-                            and ('/samples/' in n or '/examples/' in n or '/tests/' in n or '/test/' in n or 'README' in n)] #TODO: The second part of above is very "rough", find the proper sdk/ path better+filter smarter; may want to add yaml and md to this.
+                            and any([k in n for k in ['/samples/', '/examples/', '/tests/', '/test/', 'README']])] 
+                     # TODO: The second part of above is very "rough", find the proper sdk/ path better+filter smarter; may want to add yaml and md to this.
+                     # TODO: We may want to adjust this to take n.lower().contains('samples/') as well for situations like this if ends up not being an outlier. https://github.com/Azure/azure-cosmos-dotnet-v3/tree/releases/4.0.0-preview3/Microsoft.Azure.Cosmos.Samples
             for file in files:
                 body = zf.read(file)
                 try:
@@ -129,6 +159,34 @@ def get_corpus_for_package(repo:str, package:str, version:str, custom_repo_uri:s
 
     return corpus
 
+
+def get_zip_uri_and_subpath_from_github_link(custom_repo_uri:str)->tuple:
+    """Parse the raw github link into a downloadable zip, and the subpath we need to extract from it to get the directory represented in the original link."""
+    if '/tree/releases/' in custom_repo_uri:
+        base_uri, tag_and_subpath = custom_repo_uri.split('/tree/releases/', 1) # There's no way to get a zip for a subfolder, so we have to get the whole repo then filter by the intended path.
+        tag = tag_and_subpath.split('/', 1)[0] # The commit tag is always the first item after the tree specifier.
+        package_zip_uri = "{}/archive/releases/{}.zip".format(base_uri, tag)
+        try:
+            custom_subpath = tag_and_subpath.split('/', 1)[1]
+        except IndexError:
+            custom_subpath = ''
+
+    elif '/tree/' in custom_repo_uri:
+        base_uri, tag_and_subpath = custom_repo_uri.split('/tree/', 1) # There's no way to get a zip for a subfolder, so we have to get the whole repo then filter by the intended path.
+        tag = tag_and_subpath.split('/', 1)[0] # The commit tag is always the first item after the tree specifier.
+        package_zip_uri = "{}/archive/{}.zip".format(base_uri, tag)
+        try:
+            custom_subpath = tag_and_subpath.split('/', 1)[1]
+        except IndexError:
+            custom_subpath = ''
+    
+    else: # it's linking to the root of a repo if one of the above isn't present.
+        package_zip_uri = "{}/archive/master.zip".format(custom_repo_uri)
+        custom_subpath = ''
+
+    return package_zip_uri, custom_subpath
+
+
 def get_apistubgen_tokens_for_package(package:str, version:str) -> set:
     # This requires an apistubgen file to be generated and named properly to be picked up.
     try:
@@ -137,9 +195,10 @@ def get_apistubgen_tokens_for_package(package:str, version:str) -> set:
     except IOError:
         return set()
 
+
 # Helper function to do the corpus lookup and tokenization for a given list of package metadata.
 # Also extracts version tokens seperately since we can use them for special heuristics.
-def get_corpus_tokens_and_versions_for_package(metadata:list):
+def get_corpus_files_tokens_and_versions_for_package(metadata:list) -> tuple:
     corpus_files = {}
     tokens = set()
     versions = set()
@@ -149,7 +208,7 @@ def get_corpus_tokens_and_versions_for_package(metadata:list):
 
         version = each['VersionGA'] or each['VersionPreview']
         package = each['Package']
-        custom_repo_path = None if each['New'] == 'true' else each['RepoPath'] # for new ones it's just the local path.  Should maybe be checking for "http<s>" as well?
+        custom_repo_path = each['RepoPath'] if each['RepoPath'].startswith('http') else None # If RepoPath is a uri instead of just a package name, use that instead. (this can be e.g. historical or nonstandard repos)
 
         raw_corpus = get_corpus_for_package(LANGUAGE_REPO_MAP[each_language], package, version, custom_repo_path)
 
@@ -157,5 +216,10 @@ def get_corpus_tokens_and_versions_for_package(metadata:list):
         # If you have apistubgen, get that and build tokens.  If not, use the corpus files.
         stubgen_tokens = get_apistubgen_tokens_for_package(package, version) # If we have apistubgen, use it, otherwise fall back to unsupervised.
         tokens = tokens.union(stubgen_tokens or tokenize_text('\n'.join(raw_corpus.values())))
-        versions = versions.union(set([package, version.split('-')[0]]))
+
+        versions.add(package)
+        for version_id in [each['VersionGA'], each['VersionPreview']]:
+            if version_id:
+                versions.add(version_id.split('-')[0])
+
     return corpus_files, tokens, versions

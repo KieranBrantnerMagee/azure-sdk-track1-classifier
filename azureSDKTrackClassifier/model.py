@@ -4,9 +4,6 @@ from .helpers import *
 from .constants import Language, LANGUAGE_REPO_MAP
 from .tokenizers import tokenize_apistubgen, tokenize_text
 
-_DICTIONARY = enchant.Dict("en_US")
-
-
 # Contains the metadata produced by training to allow for classification.  Is the "heavy lifting" behind the public classifier API.
 # Should not be constructed directly; use `train_model` instead.
 class _TrainedModel:
@@ -18,13 +15,15 @@ class _TrainedModel:
 
         self._model = None # This gets populated incrementally once trained.
 
-    def create_feature_vector(self, text:bytes) -> list:
+    def create_feature_vector(self, text:bytes, verbose:bool=False) -> list:
         tokens = tokenize_text(text)
         found_new_tokens = self._only_new_tokens.intersection(tokens)
         found_old_tokens = self._only_old_tokens.intersection(tokens)
         found_new_versions = [v for v in self._only_new_versions if v in text]
         found_old_versions = [v for v in self._only_old_versions if v in text]
-        # In theory we might consider normalizing this by the text length too, but gut-feel is that'd cause more bias than fix. (since "Density of T1 code" may be highly variable)
+        if verbose:
+            logging.getLogger(__name__).info(f"\n new_versions: {found_new_versions}\n old_versions: {found_old_versions}\n found_new_tokens: {found_new_tokens}\n found_old_tokens: {found_old_tokens}\n")
+        # In theory we might consider normalizing this by the text length too, but gut-feel is that'd cause more bias than fix. (since "Density of T1 code" may be highly variable)  NOTE: If using SVM, there's even more need to log-normalize.
         # Similarly, I provide both the absolute and relative lengths since it's not "True" normalization, a lib can be big but only have part of it used often.
         return [len(found_new_tokens),
                 len(found_old_tokens),
@@ -38,8 +37,8 @@ class _TrainedModel:
         # It's a bit dumb to do this like so as opposed to just up-weighting the ratio in the initial feature vector, this is to future proof when we re-add in the proper classifier
         # and _don't_ want to have mucked with the raw features in odd ways, even though it might be a nice human-comprehensable threshold. (more t1 tokens than t2, including version tokens which we upweight?)
         # Mostly, take this as the simple comparator below but with an added component looking for the presence of "version-identifiers" (package names/versions); TODO: should really be tuned.
-        #return (feature_vector[2] + (feature_vector[2] / feature_vector[0]) * feature_vector[4] * 2) < (feature_vector[3] + (feature_vector[3] / feature_vector[1]) * feature_vector[5] * 2)
-        return feature_vector[2] < feature_vector[3]
+        return (feature_vector[2] + (feature_vector[2] / max(1,feature_vector[0])) * feature_vector[4] * 2) < (feature_vector[3] + (feature_vector[3] / max(1,feature_vector[1])) * feature_vector[5] * 2)
+        #return feature_vector[2] < feature_vector[3]
 
         #return "T1" == self._model.predict([feature_vector])[0] # TODO: This is very overfit right now.  Would likely be better when we get a more realistic training set. (false positives etc.)
 
@@ -47,8 +46,8 @@ class _TrainedModel:
         v = self.create_feature_vector(text)
         return self._do_prediction(v)
 
-    def classify_verbose(self, text:bytes) -> bool:
-        v = self.create_feature_vector(text)
+    def classify_verbose(self, text:bytes, extra_verbosity:bool=False) -> bool:
+        v = self.create_feature_vector(text, extra_verbosity)
         return {'result':self._do_prediction(v),
                 't2_token_count':v[0],
                 't1_token_count':v[1],
@@ -78,16 +77,16 @@ def train_model(language : Language = None, service : str = None) -> _TrainedMod
             old_package_metadata += [(e, each_language) for e in release_info[each_service] if e['New'].lower() != 'true']
 
     # Get the old/new corpus files.
-    new_corpus_files, new_tokens, new_versions = get_corpus_tokens_and_versions_for_package(new_package_metadata)
-    old_corpus_files, old_tokens, old_versions = get_corpus_tokens_and_versions_for_package(old_package_metadata)
+    new_corpus_files, new_tokens, new_versions = get_corpus_files_tokens_and_versions_for_package(new_package_metadata)
+    old_corpus_files, old_tokens, old_versions = get_corpus_files_tokens_and_versions_for_package(old_package_metadata)
 
     # Use tokens to build t1/t2 intersection sets
     intersection = new_tokens.intersection(old_tokens)
-    only_new_tokens = new_tokens - intersection - set([t for t in new_tokens if _DICTIONARY.check(t) or not re.search('[a-zA-Z]', t)]) # remove english words as that causes false positives as opposed to only looking at "tech terms", and remove punctuation-only noise.
-    only_old_tokens = old_tokens - intersection - set([t for t in old_tokens if _DICTIONARY.check(t) or not re.search('[a-zA-Z]', t)]) # MAYBE TODO: Should only do this for non-apistubgenned files?  TODO: If you end up using this for language classification, disable punctuation removal.
+    only_new_tokens = new_tokens - intersection - set([t for t in new_tokens if not re.search('[a-zA-Z]', t) or check_in_english_dictionary(t)]) # remove english words as that causes false positives as opposed to only looking at "tech terms", and remove punctuation-only noise.
+    only_old_tokens = old_tokens - intersection - set([t for t in old_tokens if not re.search('[a-zA-Z]', t) or check_in_english_dictionary(t)]) # MAYBE TODO: Should only do this for non-apistubgenned files?  TODO: If you end up using this for language classification, disable punctuation removal.
     version_intersection = new_versions.intersection(old_versions)
-    only_new_versions = new_versions - version_intersection
-    only_old_versions = old_versions - version_intersection
+    only_new_versions = new_versions - version_intersection - set([t for t in new_versions if not t.strip() or check_in_english_dictionary(t)])
+    only_old_versions = old_versions - version_intersection - set([t for t in old_versions if not t.strip() or check_in_english_dictionary(t)])
 
     # Train classifier on old/new corpus files.  (TODO: Yes, this is highly overfitting, mostly here as PoC, as we improve the testcorpus (which we should incorporate once mature) and train this on real content we will get better false positive/negative representation, in the meantime we'll use a naive decision function that "mostly performs pretty well".) 
     # First, build training vectors, and the vectorizer we'll be exporting with our classifier. (we build our model incrementally)
@@ -104,6 +103,7 @@ def train_model(language : Language = None, service : str = None) -> _TrainedMod
     # Then actually train the model.
     should_score = True
     if should_score:
+        # NOTE: Classifiers to try: KNeighborsClassifier, Linear SVM, RBF SVM, Neural Net, Naive Bayes, QDA
         scores = cross_val_score(RandomForestClassifier(max_depth=4, random_state=0), training_vectors, training_classes, cv=10)
         logging.getLogger(__name__).info("Accuracy: %0.2f (+/- %0.2f) N=%0.2f" % (scores.mean(), scores.std() * 2, len(training_vectors)/10))
 

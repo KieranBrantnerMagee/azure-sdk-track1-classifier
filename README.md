@@ -2,6 +2,7 @@
 
 The goal of this package is to provide a human-consumable model which attempts to predict whether a given document contains Track1 content which would need to be replaced.
 
+
 ## To run:
 
 First, install the package. (Currently requires manual creation, not pushed to pypi)
@@ -24,6 +25,7 @@ is_t1_with_metadata = classifier.is_t1_verbose("Arbitrary Text That You Want To 
 
 > Note: This package can also be run from the command line.  Run command `python -m azureSDKTrackClassifier -h` for full usage information.
 
+
 ## Architecture:
 
 - The final model architecture is a very simple two-class classifier.
@@ -37,7 +39,7 @@ is_t1_with_metadata = classifier.is_t1_verbose("Arbitrary Text That You Want To 
 ### classifier.py
 Contains the "public API" for this model, a class representing the model, trained on initialization, which can attempt to identify `is_t1(text)`
 ### model.py
-Contains the actual training and implementation of the model itself.
+Contains the actual training logic and implementation of the model itself.
 ### tokenizers.py
 Contains the text processing used to tokenize various components of this model, such as the text used for training (and when querying on novel text).  A separate tokenizer exists for apistubgen files.
 ### helpers.py
@@ -56,30 +58,9 @@ Contains various files that are being populated as the model is improved upon to
 ## Experiments
 Historical experiments kept to check against model regressions as well as for novel approaches.
 
-## TODO:
-- Continue exploring java-storage-blob weirdness.  Current problem seems to be that while we have V11 legacy, V8 legacy isn't in table.
-
-- proper training via real-world test corpuses mixed in with true-positive/true-negatives from repo to avoid overfitting.
-
-- Questions for Jon: (most pressing problem running into thus far: versions not in table/that I don't have data for.  Followed by, snippets that are effectively entirely ambiguous.  Need to work on special casing version heuristics, likely per-language.)
-  - Service bus 2.0.0 not on table?   https://docs.microsoft.com/en-us/dotnet/api/overview/azure/service-bus
-    - Similarly for java storage blob, while we have V11 legacy, V8 legacy isn't in table. https://docs.microsoft.com/en-us/azure/storage/blobs/storage-quickstart-blobs-java-legacy
-  - Same with service bus 1.0.0 for java https://docs.microsoft.com/en-us/java/api/overview/azure/servicebus?view=azure-java-stable
-  - some tags don't seem to exist, ala 'https://codeload.github.com/Azure/azure-sdk-for-net/zip/Microsoft.Azure.Storage.Blob_11.2.2'
-  - organizing by "ServiceName" but e.g. see "keyvault" under "Storage", does this mean what I think it means?
-  - MIT license?
-  - What's the deal with the empty package strings in the js package list? (e.g. Active Directory B2C)
-
-- Long term goals to polish and improve:
-  - Populate missing or under-present services from tables 
-    - Populate apistubgen for any services with bad signal/noise.
-    - (lower pri) Investigate additional "RepoPath" fallback, if local folder in alt location is empty of useful code, maybe fall back again to root? This may be risky, as it may ingest logic we don't want.  May be better to just get apistubgen for ones that aren't covered.
-  - Get larger labeled test data and optimize results/train model more precisely
-    - See if adding version heuristics gives better precision.
-    - See if adding n-grams gives better precision.
-    - Determine if layered or consolidated model is better.  (In other words, If "one size fits all" model does not work well, try determining e.g. Language or Service first, then run targeted classifier.)
 
 ## Misc Implementation Notes:
+
 - Approaches for a consolidated model:
   - Primary approach: Create a new model trained all up on t1 vs t2.
   - Backup approach: Run constituent models, generate feature vector from results. (should they be 3 class, or simply "not t1?"  the latter seems smarter, but may be worth finding out if that's sufficient.)
@@ -105,7 +86,36 @@ Historical experiments kept to check against model regressions as well as for no
   - Simply update the enum and repo-mapping dict in the constants.py file.  
   - If the language repository has a repo/file naming convention where the relevent external interfaces wouldn't be captured looking for "/tests/" "/test/" "/samples/" or "/examples/" then update the filter function in `get_corpus_for_package`
 
+
 ## Future Experiments:
+
 - Should I be normalizing feature vectors by text length?  Given that relevant content can be sparse within total text it seems like potentially unnecessary bias introduction, but might be worth a try. (e.g. it'd be nice if we knew we were working on "only code specifically in t1 or t2 for this service", at least without a MUCH bigger training corpus.)
 - Should I be splitting up code segments from markdown or parsing the whole file?  Or glomming code segments under a certain size together?  How to aggregate child results if we go that way?
 - Should I create a long feature vector of submodels, or a master model?
+
+
+## TODO:
+
+- Continue exploring java-storage-blob weirdness.  Current problem seems to be that while we have V11 legacy, V8 legacy isn't in table.  
+    - (also: filter out things like this?  found_old_tokens: {'ae9d', 'localPath', 'localFile', 'FileWriter', '8b34', '47e6', '260e', 'bea2'})
+- proper training via real-world test corpuses mixed in with true-positive/true-negatives from repo to avoid overfitting.
+- (low pri) write a unit test for apistubgen tokenization, since it's self contained and somewhat finniky.
+- (low pri) Investigate steps to use this for language/service tagging as well.
+
+- Questions for Jon: (most pressing problem running into thus far: versions not in table/that I don't have data for.  Followed by, snippets that are effectively entirely ambiguous.  Need to work on special casing version heuristics, likely per-language.)
+  - Service bus 2.0.0 not on table?   https://docs.microsoft.com/en-us/dotnet/api/overview/azure/service-bus
+    - Similarly for java storage blob, while we have V11 legacy, V8 legacy isn't in table. https://docs.microsoft.com/en-us/azure/storage/blobs/storage-quickstart-blobs-java-legacy
+  - Same with service bus 1.0.0 for java https://docs.microsoft.com/en-us/java/api/overview/azure/servicebus?view=azure-java-stable
+  - some tags don't seem to exist, ala 'https://codeload.github.com/Azure/azure-sdk-for-net/zip/Microsoft.Azure.Storage.Blob_11.2.2'
+  - organizing by "ServiceName" but e.g. see "keyvault" under "Storage", does this mean what I think it means?
+  - MIT license?
+  - What's the deal with the empty package strings in the js package list? (e.g. Active Directory B2C)
+
+- Long term goals to polish and improve:
+  - Populate missing or under-present services from tables 
+    - Populate apistubgen for any services with bad signal/noise.
+    - (lower pri) Investigate additional "RepoPath" fallback, if local folder in alt location is empty of useful code, maybe fall back again to root? This may be risky, as it may ingest logic we don't want.  May be better to just get apistubgen for ones that aren't covered.
+  - Get larger labeled test data and optimize results/train model more precisely
+    - See if adding version heuristics gives better precision.
+    - See if adding n-grams gives better precision.
+    - Determine if layered or consolidated model is better.  (In other words, If "one size fits all" model does not work well, try determining e.g. Language or Service first, then run targeted classifier.)

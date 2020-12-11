@@ -23,9 +23,12 @@ class AzureSDKTrackClassifier: # Someone with more sense than me can rename this
         """ Classify given text as containing T1 content """
         return self._trained_model.classify(text)
 
-    def is_t1_verbose(self, text:str) -> dict:
-        """ Classify given text as containing T1 content, returning a dictionary containing not only the result but supplementary metadata used for classification. """
-        return self._trained_model.classify_verbose(text)
+    def is_t1_verbose(self, text:str, extra_verbosity:bool=False) -> dict:
+        """ Classify given text as containing T1 content, returning a dictionary containing not only the result but supplementary metadata used for classification. 
+
+            extra_verbosity outputs to logging the new and old tokens that were detected.
+        """
+        return self._trained_model.classify_verbose(text, extra_verbosity)
 
     def save(self, path:str = None) -> str:
         """ Saves the model to a file.
