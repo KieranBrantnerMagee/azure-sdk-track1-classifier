@@ -1,0 +1,72 @@
+
+EH - Dotnet - 12/10/2020
+
+INFO:azureSDKTrackClassifier.model:RandomForestClassifier(max_depth=4, random_state=0) Accuracy: 0.96 (+/- 0.16) N=20.90
+INFO:azureSDKTrackClassifier.model:KNeighborsClassifier(n_neighbors=3) Accuracy: 0.96 (+/- 0.18) N=20.90
+INFO:azureSDKTrackClassifier.model:SVC(C=0.025, kernel='linear') Accuracy: 0.94 (+/- 0.21) N=20.90
+INFO:azureSDKTrackClassifier.model:SVC(C=1, gamma=2) Accuracy: 0.77 (+/- 0.17) N=20.90
+INFO:azureSDKTrackClassifier.model:MLPClassifier(alpha=1, max_iter=1000) Accuracy: 0.96 (+/- 0.18) N=20.90
+INFO:azureSDKTrackClassifier.model:GaussianNB() Accuracy: 0.98 (+/- 0.10) N=20.90
+
+None - Dotnet - 12/10/2020
+
+INFO:azureSDKTrackClassifier.model:RandomForestClassifier(max_depth=4, random_state=0) Accuracy: 0.92 (+/- 0.17) N=588.20
+INFO:azureSDKTrackClassifier.model:KNeighborsClassifier(n_neighbors=3) Accuracy: 0.92 (+/- 0.16) N=588.20
+INFO:azureSDKTrackClassifier.model:SVC(C=0.025, kernel='linear') Accuracy: 0.91 (+/- 0.18) N=588.20
+INFO:azureSDKTrackClassifier.model:SVC(C=1, gamma=2) Accuracy: 0.89 (+/- 0.14) N=588.20
+INFO:azureSDKTrackClassifier.model:MLPClassifier(alpha=1, max_iter=1000) Accuracy: 0.92 (+/- 0.17) N=588.20
+INFO:azureSDKTrackClassifier.model:GaussianNB() Accuracy: 0.92 (+/- 0.15) N=588.20
+
+None - None - 12/10/2020
+
+INFO:azureSDKTrackClassifier.model:RandomForestClassifier(max_depth=4, random_state=0) Accuracy: 0.94 (+/- 0.12) N=1612.60
+INFO:azureSDKTrackClassifier.model:KNeighborsClassifier() Accuracy: 0.91 (+/- 0.12) N=1612.60
+INFO:azureSDKTrackClassifier.model:KNeighborsClassifier(n_neighbors=3) Accuracy: 0.91 (+/- 0.12) N=1612.60
+INFO:azureSDKTrackClassifier.model:KNeighborsClassifier(n_neighbors=20) Accuracy: 0.91 (+/- 0.12) N=1612.60
+INFO:azureSDKTrackClassifier.model:KNeighborsClassifier(n_neighbors=3, weights='distance') Accuracy: 0.91 (+/- 0.12) N=1612.60
+INFO:azureSDKTrackClassifier.model:SVC(C=0.025, kernel='linear') Accuracy: 0.93 (+/- 0.13) N=1612.60
+INFO:azureSDKTrackClassifier.model:SVC(C=1, kernel='linear') Accuracy: 0.94 (+/- 0.12) N=1612.60
+INFO:azureSDKTrackClassifier.model:SVC(C=0.025, kernel='sigmoid') Accuracy: 0.69 (+/- 0.03) N=1612.60
+INFO:azureSDKTrackClassifier.model:SVC(C=1, gamma=2) Accuracy: 0.92 (+/- 0.11) N=1612.60
+INFO:azureSDKTrackClassifier.model:MLPClassifier(alpha=1, max_iter=1000) Accuracy: 0.94 (+/- 0.12) N=1612.60
+INFO:azureSDKTrackClassifier.model:MLPClassifier(alpha=1) Accuracy: 0.94 (+/- 0.12) N=1612.60
+INFO:azureSDKTrackClassifier.model:MLPClassifier(alpha=1, solver='lbfgs') Accuracy: 0.94 (+/- 0.12) N=1612.60
+INFO:azureSDKTrackClassifier.model:MLPClassifier(solver='lbfgs') Accuracy: 0.94 (+/- 0.12) N=1612.60
+INFO:azureSDKTrackClassifier.model:GaussianNB() Accuracy: 0.91 (+/- 0.12) N=1612.60
+
+None - None - 12/10/2020 - 2
+
+INFO:azureSDKTrackClassifier.model:RandomForestClassifier(max_depth=4, random_state=0) Accuracy: 0.94 (+/- 0.12) N=1612.60
+INFO:azureSDKTrackClassifier.model:KNeighborsClassifier() Accuracy: 0.91 (+/- 0.12) N=1612.60
+INFO:azureSDKTrackClassifier.model:SVC(C=2, kernel='linear') Accuracy: 0.94 (+/- 0.12) N=1612.60
+INFO:azureSDKTrackClassifier.model:SVC(C=1, kernel='linear') Accuracy: 0.94 (+/- 0.12) N=1612.60
+INFO:azureSDKTrackClassifier.model:SVC(C=1, kernel='sigmoid') Accuracy: 0.70 (+/- 0.09) N=1612.60
+INFO:azureSDKTrackClassifier.model:SVC(C=1, gamma=2) Accuracy: 0.92 (+/- 0.11) N=1612.60
+INFO:azureSDKTrackClassifier.model:SVC(C=2, gamma=2) Accuracy: 0.93 (+/- 0.11) N=1612.60
+INFO:azureSDKTrackClassifier.model:SVC(C=1, gamma=1) Accuracy: 0.93 (+/- 0.11) N=1612.60
+INFO:azureSDKTrackClassifier.model:SVC(C=1, gamma=4) Accuracy: 0.92 (+/- 0.12) N=1612.60
+INFO:azureSDKTrackClassifier.model:SVC(C=1, gamma=4) Accuracy: 0.92 (+/- 0.12) N=1612.60
+INFO:azureSDKTrackClassifier.model:MLPClassifier() Accuracy: 0.94 (+/- 0.12) N=1612.60
+INFO:azureSDKTrackClassifier.model:GaussianNB() Accuracy: 0.91 (+/- 0.12) N=1612.60
+
+None - None - 12/10/2020 - 3
+
+INFO:azureSDKTrackClassifier.model:RandomForestClassifier(max_depth=4, random_state=0) Accuracy: 0.94 (+/- 0.12) N=1612.60
+INFO:azureSDKTrackClassifier.model:KNeighborsClassifier() Accuracy: 0.91 (+/- 0.12) N=1612.60
+INFO:azureSDKTrackClassifier.model:SVC(kernel='linear') Accuracy: 0.94 (+/- 0.12) N=1612.60
+INFO:azureSDKTrackClassifier.model:SVC(C=1, gamma=1) Accuracy: 0.93 (+/- 0.11) N=1612.60
+INFO:azureSDKTrackClassifier.model:SVC(gamma=0.5) Accuracy: 0.94 (+/- 0.12) N=1612.60
+INFO:azureSDKTrackClassifier.model:SVC(gamma=0.01) Accuracy: 0.93 (+/- 0.13) N=1612.60
+INFO:azureSDKTrackClassifier.model:SVC() Accuracy: 0.71 (+/- 0.10) N=1612.60
+INFO:azureSDKTrackClassifier.model:MLPClassifier() Accuracy: 0.94 (+/- 0.12) N=1612.60
+INFO:azureSDKTrackClassifier.model:GaussianNB() Accuracy: 0.91 (+/- 0.12) N=1612.60
+
+None - None - 12/10/2020 - 4
+
+INFO:azureSDKTrackClassifier.model:KNeighborsClassifier() Accuracy: 0.91 (+/- 0.12) N=1612.60
+INFO:azureSDKTrackClassifier.model:SVC(kernel='linear') Accuracy: 0.94 (+/- 0.12) N=1612.60
+INFO:azureSDKTrackClassifier.model:SVC(C=1, gamma=1) Accuracy: 0.93 (+/- 0.11) N=1612.60
+INFO:azureSDKTrackClassifier.model:SVC(C=2, gamma=1) Accuracy: 0.93 (+/- 0.11) N=1612.60
+INFO:azureSDKTrackClassifier.model:SVC(gamma=0.5) Accuracy: 0.94 (+/- 0.12) N=1612.60
+INFO:azureSDKTrackClassifier.model:SVC(C=2, gamma=0.5) Accuracy: 0.94 (+/- 0.12) N=1612.60
+INFO:azureSDKTrackClassifier.model:MLPClassifier() Accuracy: 0.94 (+/- 0.12) N=1612.60

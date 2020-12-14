@@ -9,11 +9,9 @@ import zipfile
 import enchant
 import exdown
 import requests
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.model_selection import cross_val_score
 
 from .constants import Language, LANGUAGE_REPO_MAP
-from .tokenizers import tokenize_text
+from .tokenizers import tokenize_text, tokenize_apistubgen
 
 
 def get_extension(name:str):
@@ -187,10 +185,11 @@ def get_zip_uri_and_subpath_from_github_link(custom_repo_uri:str)->tuple:
     return package_zip_uri, custom_subpath
 
 
-def get_apistubgen_tokens_for_package(package:str, version:str) -> set:
+def get_apistubgen_tokens_for_package(language:Language, package:str, version:str) -> set:
     # This requires an apistubgen file to be generated and named properly to be picked up.
     try:
-        with open("./apistubgen/{}_{}.json") as f:
+        with open("./ApiStubGen/{}_{}_{}.json".format(Language(language).value, package, version)) as f:
+            logging.getLogger(__name__).info("Found apistubgen file for {} {} {};".format(language, package, version))
             return set([token for token_list in tokenize_apistubgen(json.loads(f.read())).values() for token in token_list])
     except IOError:
         return set()
@@ -214,7 +213,7 @@ def get_corpus_files_tokens_and_versions_for_package(metadata:list) -> tuple:
 
         corpus_files.update(raw_corpus)
         # If you have apistubgen, get that and build tokens.  If not, use the corpus files.
-        stubgen_tokens = get_apistubgen_tokens_for_package(package, version) # If we have apistubgen, use it, otherwise fall back to unsupervised.
+        stubgen_tokens = get_apistubgen_tokens_for_package(each_language, package, version) # If we have apistubgen, use it, otherwise fall back to unsupervised.
         tokens = tokens.union(stubgen_tokens or tokenize_text('\n'.join(raw_corpus.values())))
 
         versions.add(package)

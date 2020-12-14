@@ -1,3 +1,4 @@
+import glob
 import os
 
 from azureSDKTrackClassifier import AzureSDKTrackClassifier, Language
@@ -11,31 +12,35 @@ if __name__ == "__main__":
     #is_t1_classifier = AzureSDKTrackClassifier(Language.java, "Storage")
     #is_t1_classifier = AzureSDKTrackClassifier(Language.dotnet, "ServiceBus")
     #is_t1_classifier = AzureSDKTrackClassifier(Language.java, "ServiceBus")
-    is_t1_classifier = AzureSDKTrackClassifier(Language.dotnet, "EventHubs")
-    is_t1_classifier.save()
+    #is_t1_classifier = AzureSDKTrackClassifier(Language.dotnet, "EventHubs")
+    #is_t1_classifier.save()
     #is_t1_classifier = AzureSDKTrackClassifier(Language.java, "EventHubs")
-    is_t1_classifier = AzureSDKTrackClassifier(Language.dotnet, None)
+    #is_t1_classifier = AzureSDKTrackClassifier(Language.dotnet, None)
     #is_t1_classifier = AzureSDKTrackClassifier(Language.js, None)
     #is_t1_classifier = AzureSDKTrackClassifier(Language.java, None)
-    #is_t1_classifier = AzureSDKTrackClassifier(None, None)
+    is_t1_classifier = AzureSDKTrackClassifier(None, None)
     is_t1_classifier.save()
 
     #is_t1_classifier = AzureSDKTrackClassifier.load('azureSDKTrackClassifier_None_None.model')
 
-    language = Language.java
+    #language = Language.java
     #language = Language.dotnet
+
     #service = 'ServiceBus' # Thus far have ServiceBus, Storage, EventHubs for Java and Dotnet
     #service = 'Storage'
-    service = 'EventHubs'
-    
+    #service = 'EventHubs'
 
-    for tier in ['T1', 'T2']:
-        t1_folder = './TestCorpus/{}/{}/{}'.format(language.value, service, tier)
-        for subdir, dirs, files in os.walk(t1_folder):
-            for file in files:
-                full_file_path = os.path.join(t1_folder, file)
-                with open(full_file_path) as f:
-                    is_t1 = is_t1_classifier.is_t1_verbose(f.read(), True)['result']
-                    print("{}: {}\t({})\n".format(tier, "Correct" if( (is_t1 and tier == 'T1') or (not is_t1 and tier == 'T2')) else "Incorrect", full_file_path))
+    language = None # the language test file to run against, None for all.
+    service = None # the service test file to run against, None for all.
+    
+    test_corpus_glob = './TestCorpus/*/*/*/*'
+    for file_path in glob.glob(test_corpus_glob, recursive=True):
+        path_base, path_language, path_service, path_tier, file_name = os.path.normpath(file_path).split(os.sep)
+        if (language and language != Language(path_language)) or (service and service != path_service):
+            continue
+        with open(file_path) as f:
+            is_t1 = is_t1_classifier.is_t1_verbose(f.read(), True)
+            print("{}: {}\t({})".format(path_tier, "Correct" if( (is_t1['result'] and path_tier == 'T1') or (not is_t1['result'] and path_tier == 'T2')) else "Incorrect", file_path))
+            print("\t{}: {}\t({})\n".format(path_tier, "ML:  " + ("Correct" if( (is_t1['ml_result'] and path_tier == 'T1') or (not is_t1['ml_result'] and path_tier == 'T2')) else "Incorrect") + " " + str(is_t1['ml_result_probability']), file_path))
 
     exit()

@@ -1,4 +1,5 @@
 from collections import defaultdict
+from enum import Enum
 
 from nltk.tokenize import WordPunctTokenizer
 
@@ -16,7 +17,8 @@ def tokenize_apistubgen(stub_json):
         for child in root["ChildItems"]:
             _ingest_subtree(child)
 
-    _ingest_subtree(stub_json["Navigation"])
+    for root in stub_json["Navigation"]:
+        _ingest_subtree(root)
 
     # Now process the tree we just ingested.
     
@@ -86,5 +88,5 @@ def tokenize_apistubgen(stub_json):
 
 _tokenizer = WordPunctTokenizer() # NOTE: This is somewhat arbitrary outside it being convenient and giving acceptable punctuation handling for our needs.
 def tokenize_text(text:str) -> set:
-    return set(_tokenizer.tokenize(text)) # Contemplated things like occurence filtering and the like, but this "seems workable" for the time being, if we added that we should go all the way to feature vectors and a full classifier.
+    return set(_tokenizer.tokenize(text)) # Contemplated things like occurence filtering and the like, but this "seems workable" for the time being, although could be improved.
 

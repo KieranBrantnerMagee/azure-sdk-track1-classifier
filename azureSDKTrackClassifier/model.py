@@ -1,4 +1,11 @@
+import os
 import re
+import glob
+
+from sklearn.model_selection import cross_val_score
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.svm import SVC
+from sklearn.neural_network import MLPClassifier
 
 from .helpers import *
 from .constants import Language, LANGUAGE_REPO_MAP
@@ -32,23 +39,27 @@ class _TrainedModel:
                 len(found_new_versions),
                 len(found_old_versions)]
 
-    def _do_prediction(self, feature_vector:list) -> bool:
-        """Internal function that makes the actual yes/no decision based on the feature vector"""
+    def _do_naive_prediction(self, feature_vector:list) -> bool:
+        """Internal function that makes the actual yes/no decision based on the feature vector (Based on human-comprehensable decision criterea)"""
         # It's a bit dumb to do this like so as opposed to just up-weighting the ratio in the initial feature vector, this is to future proof when we re-add in the proper classifier
         # and _don't_ want to have mucked with the raw features in odd ways, even though it might be a nice human-comprehensable threshold. (more t1 tokens than t2, including version tokens which we upweight?)
         # Mostly, take this as the simple comparator below but with an added component looking for the presence of "version-identifiers" (package names/versions); TODO: should really be tuned.
         return (feature_vector[2] + (feature_vector[2] / max(1,feature_vector[0])) * feature_vector[4] * 2) < (feature_vector[3] + (feature_vector[3] / max(1,feature_vector[1])) * feature_vector[5] * 2)
         #return feature_vector[2] < feature_vector[3]
 
-        #return "T1" == self._model.predict([feature_vector])[0] # TODO: This is very overfit right now.  Would likely be better when we get a more realistic training set. (false positives etc.)
+    def _do_ml_prediction(self, feature_vector:list) -> bool:
+        """Internal function that makes the actual yes/no decision based on the feature vector (Based on a pre-trained ML model)"""
+        return "T1" == self._model.predict([feature_vector])[0] # TODO: This is very overfit right now.  Would likely be better when we get a more realistic training set. (false positives etc.)
 
     def classify(self, text:bytes) -> bool:
         v = self.create_feature_vector(text)
-        return self._do_prediction(v)
+        return self._do_naive_prediction(v)
 
     def classify_verbose(self, text:bytes, extra_verbosity:bool=False) -> bool:
         v = self.create_feature_vector(text, extra_verbosity)
-        return {'result':self._do_prediction(v),
+        return {'result':self._do_naive_prediction(v),
+                'ml_result':self._do_ml_prediction(v),
+                'ml_result_probability':self._model.predict_log_proba([v])[0],
                 't2_token_count':v[0],
                 't1_token_count':v[1],
                 'percent_of_all_t2':v[2],
@@ -95,19 +106,37 @@ def train_model(language : Language = None, service : str = None) -> _TrainedMod
 
     training_vectors = []
     training_classes = []
-    for (corpus, label) in [(new_corpus_files, "Not T1"), (old_corpus_files, "T1")]:
+    for (corpus, label) in [(new_corpus_files, "T2"), (old_corpus_files, "T1")]:
         for file, text in corpus.items():
             training_vectors.append(trained_model.create_feature_vector(text))
             training_classes.append(label)
 
+    # We want to include not only the "perfect examples" (corpus files) but real-world/ambiguous examples.
+    test_corpus_glob = './TestCorpus/*/*/*/*'
+    for file_path in glob.glob(test_corpus_glob, recursive=True):
+        with open(file_path) as f:
+            path_base, path_language, path_service, path_tier, file_name = os.path.normpath(file_path).split(os.sep)
+            assert path_base == 'TestCorpus'
+            if (language and language != Language(path_language)) or (service and service != path_service):
+                continue
+            training_vectors.append(trained_model.create_feature_vector(f.read()))
+            training_classes.append(path_tier)
+            logging.getLogger(__name__).info("INCORPORATING TEST CORPUS FILE: {}".format(file_path))
+
+    logging.getLogger(__name__).info("Beginning model training")
     # Then actually train the model.
     should_score = True
     if should_score:
-        # NOTE: Classifiers to try: KNeighborsClassifier, Linear SVM, RBF SVM, Neural Net, Naive Bayes, QDA
-        scores = cross_val_score(RandomForestClassifier(max_depth=4, random_state=0), training_vectors, training_classes, cv=10)
-        logging.getLogger(__name__).info("Accuracy: %0.2f (+/- %0.2f) N=%0.2f" % (scores.mean(), scores.std() * 2, len(training_vectors)/10))
+        # These are the classifiers that experimentally seemed to perform best on the style of feature vectors we were using. (Tested RandomForest (which is more advised for if this went a multi-class approach), KNeighborsClassifier, Linear SVM, RBF SVM, Neural Net, Naive Bayes)
+        # MLP and Linear SVC are most promising.  RBF/Kneighbors may be good with more training data, or if we find eccentricities in real world results that benefit from how they classify.
+        for classifier in [KNeighborsClassifier(), # Performs least well but _may_ give some good extrapolative properties.  Leaving in for testing.
+                           SVC(kernel="linear"),
+                           SVC(gamma=.5),
+                           MLPClassifier(solver='lbfgs', max_iter=1000)]:
+            scores = cross_val_score(classifier, training_vectors, training_classes, cv=10)
+            logging.getLogger(__name__).info("%s Accuracy: %0.2f (+/- %0.2f) N=%0.2f" % (str(classifier), scores.mean(), scores.std() * 2, len(training_vectors)/10))
 
-    trained_model._model = RandomForestClassifier(max_depth=4, random_state=0)
+    trained_model._model = MLPClassifier(solver='lbfgs', max_iter=1000)
     trained_model._model.fit(training_vectors, training_classes)
 
     return trained_model

@@ -15,8 +15,8 @@ from pathlib import Path
 PACKAGE_NAME = "azure-sdk-document-track-classifier"
 PACKAGE_PPRINT_NAME = "AzureSDK Document Track Classifier"
 
-package_folder_path = "azureSDKTrackCLassifier"
-namespace_name = "azureSDKTrackCLassifier"
+package_folder_path = "azureSDKTrackClassifier"
+namespace_name = "azureSDKTrackClassifier"
 
 # Version extraction inspired from 'requests'
 with open(os.path.join(package_folder_path, '_version.py'), 'r') as fd:
@@ -53,8 +53,10 @@ setup(
     zip_safe=False,
     packages=find_packages(exclude=[
         'tests',
+        'samples',
         'TestCorpus',
-        'Experiments'
+        'Experiments',
+        'ApiStubgen'
     ]),
     install_requires=requires
 )
