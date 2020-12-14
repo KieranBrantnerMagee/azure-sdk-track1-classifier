@@ -44,7 +44,7 @@ class _TrainedModel:
         # It's a bit dumb to do this like so as opposed to just up-weighting the ratio in the initial feature vector, this is to future proof when we re-add in the proper classifier
         # and _don't_ want to have mucked with the raw features in odd ways, even though it might be a nice human-comprehensable threshold. (more t1 tokens than t2, including version tokens which we upweight?)
         # Mostly, take this as the simple comparator below but with an added component looking for the presence of "version-identifiers" (package names/versions); TODO: should really be tuned.
-        return (feature_vector[2] + (feature_vector[2] / max(1,feature_vector[0])) * feature_vector[4] * 2) < (feature_vector[3] + (feature_vector[3] / max(1,feature_vector[1])) * feature_vector[5] * 2)
+        return (feature_vector[2] + max(feature_vector[2] / max(1,feature_vector[0]), 1) * feature_vector[4] * 2) < (feature_vector[3] + max(feature_vector[3] / max(1,feature_vector[1]), 1) * feature_vector[5] * 2)
         #return feature_vector[2] < feature_vector[3]
 
     def _do_ml_prediction(self, feature_vector:list) -> bool:

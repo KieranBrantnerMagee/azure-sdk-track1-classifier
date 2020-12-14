@@ -78,7 +78,7 @@ def get_release_metadata(language:Language):
     return info
 
 
-CACHE_BASE="Z:\\scratch\\" # "." #TODO: Swap this back in.
+CACHE_BASE="."
 def get_corpus_for_package(repo:str, package:str, version:str, custom_repo_uri:str=None, use_cache:bool=True, use_raw_corpus_cache:bool=False) -> dict:
     """Fetches a dict of 'public interface code' files (samples, tests, readme, representative samples you'd see in public documentation) from a specified
     repo, package, and version. (for Azure SDK packages on github)."""
