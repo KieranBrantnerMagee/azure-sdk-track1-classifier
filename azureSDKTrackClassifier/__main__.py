@@ -20,6 +20,8 @@ if __name__ == "__main__":
     parser.add_argument('--load-from-blob', type=str, help='Load a cached model from an azure storage blob rather than training from scratch.  Specify the blob path with this argument.  Azure credentials must be provided by environment variables AZURE_STORAGE_CONNECTION_STRING and AZURE_STORAGE_CONTAINER respectively.')
     parser.add_argument('--save-to-blob', type=str, help='Save the model trained or used in this run to an azure storage blob so it may be loaded again in the future.  Specify the blob path with this argument.  Azure credentials must be provided by environment variables AZURE_STORAGE_CONNECTION_STRING and AZURE_STORAGE_CONTAINER respectively.')
 
+    parser.add_argument('--input-is-path', default=False, action='store_true', help='Enable this flag to denote that the primary argument provided is a filepath, not a string of text.')
+
     args = parser.parse_args()
 
     if args.log_level:
@@ -33,10 +35,15 @@ if __name__ == "__main__":
     else:
         is_t1_classifier = AzureSDKTrackClassifier(args.language, args.service)
 
+    text = args.text
+    if args.input_is_path:
+        with open(args.text) as f:
+            text = f.read()
+
     if args.verbose:
-        result = is_t1_classifier.is_t1_verbose(args.text)
+        result = is_t1_classifier.is_t1_verbose(text)
     else:
-        result = is_t1_classifier.is_t1(args.text)
+        result = is_t1_classifier.is_t1(text)
 
     print(result)
 
