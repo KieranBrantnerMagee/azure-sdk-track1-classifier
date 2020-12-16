@@ -62,6 +62,12 @@ def check_in_english_dictionary(word:str) -> bool:
         logging.getLogger(__name__).warning("Warning: Exception while checking english dictionary for string '{}': {}".format(word, e))
         return False
 
+def do_github_zip_request(zip_uri):
+    # Does the actual request, along with some heuristics in case the main branch is main or master.
+    version_zip = requests.get(zip_uri).content
+    if version_zip == b'404: Not Found' and 'master.zip' in zip_uri: # This is a github-ism.
+        version_zip = requests.get(zip_uri.replace('master.zip', 'main.zip')).content
+    return version_zip
 
 @lru_cache
 def get_release_metadata(language:Language):
@@ -78,7 +84,7 @@ def get_release_metadata(language:Language):
     return info
 
 
-CACHE_BASE="."
+CACHE_BASE="Z:\\scratch\\" # "." #TODO: Swap this back in.
 def get_corpus_for_package(repo:str, package:str, version:str, custom_repo_uri:str=None, use_cache:bool=True, use_raw_corpus_cache:bool=False) -> dict:
     """Fetches a dict of 'public interface code' files (samples, tests, readme, representative samples you'd see in public documentation) from a specified
     repo, package, and version. (for Azure SDK packages on github)."""
@@ -123,11 +129,11 @@ def get_corpus_for_package(repo:str, package:str, version:str, custom_repo_uri:s
                 version_zip = f.read()
                 logging.getLogger(__name__).info("Found in cache {} {} {}".format(repo, package, version))
         except:
-            version_zip = requests.get(package_zip_uri).content
+            version_zip = do_github_zip_request(package_zip_uri)
             with open(raw_cache_name, 'wb') as f:
                 f.write(version_zip)
     else:
-        version_zip = requests.get(package_zip_uri).content
+        version_zip = do_github_zip_request(package_zip_uri)
 
     if version_zip == b'404: Not Found': # This is a github-ism.
         logging.getLogger(__name__).warning("No zip for URI: {}".format(package_zip_uri))

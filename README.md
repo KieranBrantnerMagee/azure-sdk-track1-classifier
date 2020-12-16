@@ -8,9 +8,9 @@ The goal of this package is to provide a human-consumable model which attempts t
 First, install the package. (Currently requires manual creation, not pushed to pypi)
 `pip install azure-sdk-document-track-classifier.whl`
 
-> Note: If you are a dev working on the package, it may be easier to directly install requirements via `pip install -r requirements.txt`
+> Note: If you are a dev working on the package, it may be easier to directly install requirements via `pip install -r requirements.txt` or to do a local package install via `pip -e`
 
-Second, consume the classifier. (64 bit python is recommended for training.)
+Second, consume the classifier. (64 bit python is recommended for training.)  Be aware that if one does not `load` an existing model file, it will begin training from scratch.  This will take time, and will create accompanying cache files.
 ```python
 from azureSDKTrackClassifier import AzureSDKTrackClassifier
 classifier = AzureSDKTrackClassifier() # Can optionally be passed language and service parameters to narrow the classification granularity.
@@ -88,11 +88,19 @@ Contains APIStubgen files named in the format of {language}_{service}_{version}.
   - Simply update the enum and repo-mapping dict in the constants.py file.  
   - If the language repository has a repo/file naming convention where the relevent external interfaces wouldn't be captured looking for "/tests/" "/test/" "/samples/" or "/examples/" then update the filter function in `get_corpus_for_package`
 
+## Troubleshooting:
+
+- Enable logging on the command line via `--log-level debug` (or at the desired level)
+- Enable logging in your calling program via `logging.basicConfig(level=logging.INFO)`
 
 ## TODO:
 
+- Make load-from-blob/to blob take SAS string.
+- is there any way to make model training incremental.
+
 - Continue exploring java-storage-blob weirdness.  Current problem seems to be that while we have V11 legacy, V8 legacy isn't in table, but it seems like a good example of "highly ambiguous" to iterate on.
 - (low pri) Investigate steps to use this for language/service tagging as well.
+- (low pri) have logging use a common logger name to be properly enabled/disabled by name, and put the function name into the log string.
 
 - Questions for Jon: (most pressing problem running into thus far: versions not in table/that I don't have data for.  Followed by, snippets that are effectively entirely ambiguous. )
   - Some versions with documentation aren't on the release table.  See below.

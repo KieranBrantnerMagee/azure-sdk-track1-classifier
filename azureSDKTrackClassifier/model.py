@@ -49,7 +49,8 @@ class _TrainedModel:
 
     def _do_ml_prediction(self, feature_vector:list) -> bool:
         """Internal function that makes the actual yes/no decision based on the feature vector (Based on a pre-trained ML model)"""
-        return "T1" == self._model.predict([feature_vector])[0] # TODO: This is very overfit right now.  Would likely be better when we get a more realistic training set. (false positives etc.)
+        # TODO: This is very overfit right now.  Would likely be better when we get a more realistic training set. (false positives etc.)
+        return "T1" == self._model.predict([feature_vector])[0] and any(feature_vector) # The last part is a hack to make the empty case look good even if the model isn't trained on it well 
 
     def classify(self, text:bytes) -> bool:
         v = self.create_feature_vector(text)
