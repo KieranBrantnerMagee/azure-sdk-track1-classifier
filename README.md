@@ -46,6 +46,8 @@ Contains the text processing used to tokenize various components of this model, 
 Contains the assorted miscellaneous helper functions used elsewhere; file name parsers, corpus and metadata fetchers, etc.
 ### constants.py
 Various enums (e.g. `Language`) and other invariants used in the model.
+### settings.py
+Like constants, but settings that can be modified at runtime. (e.g. cache path)
 > **Note:** Above are the core files.  Below are ancillary.
 ## \_\_main\_\_.py
 Contains logic for command-line runnability of this package.  (e.g. running via python -m azureSDKTrackClassifier)
@@ -95,14 +97,19 @@ Contains APIStubgen files named in the format of {language}_{service}_{version}.
 
 ## TODO:
 
-- Make load-from-blob/to blob take SAS string.
-- is there any way to make model training incremental.
+- is there any way to make model training incremental. (I wonder if we can do a token blacklist, since a lot of the issue is old false positive.)
+
+-? low-signal denoising (Get bigger corpus of low threshold items, then upsample the hell out of them in model training.) (May also be interesting to make a cutoff on low-signal items in unsupervised corpus; e.g. "must be seen >once"; although this may drastically lower signal as well.)
 
 - Continue exploring java-storage-blob weirdness.  Current problem seems to be that while we have V11 legacy, V8 legacy isn't in table, but it seems like a good example of "highly ambiguous" to iterate on.
 - (low pri) Investigate steps to use this for language/service tagging as well.
 - (low pri) have logging use a common logger name to be properly enabled/disabled by name, and put the function name into the log string.
 
 - Questions for Jon: (most pressing problem running into thus far: versions not in table/that I don't have data for.  Followed by, snippets that are effectively entirely ambiguous. )
+  -(new) Followup on low-signal items: Any gut-feel for if a manual cutoff (e.g. ignore over this threshold) would be useful?  Or still high variance.  May be easier to tell after testing with codefence bits.
+  -(new) Followup on perf investigation:  I'm not seeing the same perf hit.  Are you running per doc?  Per repo? loading model from file?  I'm seeing sub-second wall-clock times.  I added multiproc to classification but process start overhead dominates such that it's basically not worth it.
+    - Now what IS slow, is starting up the python interpreter each time you shell out. (but even that's only like 2-3 seconds)  Curious for how you're doing that
+    - if all else fails, can look at making async.
   - Some versions with documentation aren't on the release table.  See below.
     - Service bus 2.0.0 not on table?   https://docs.microsoft.com/en-us/dotnet/api/overview/azure/service-bus
     - Similarly for java storage blob, while we have V11 legacy, V8 legacy isn't in table. https://docs.microsoft.com/en-us/azure/storage/blobs/storage-quickstart-blobs-java-legacy
@@ -125,4 +132,5 @@ Contains APIStubgen files named in the format of {language}_{service}_{version}.
 - Try culling seen tokens by occurance rate if not using apistubgen (to filter out things like random strings that only appear once), and adding some concept of "total # seen including duplicates" into the feature vector; e.g.  found_old_tokens: {'ae9d', 'localPath', 'localFile', 'FileWriter', '8b34', '47e6', '260e', 'bea2'} (from URL segments)
 - Should I be normalizing feature vectors by text length?  Given that relevant content can be sparse within total text it seems like potentially unnecessary bias introduction, but might be worth a try. (e.g. it'd be nice if we knew we were working on "only code specifically in t1 or t2 for this service", at least without a MUCH bigger training corpus.)
 - Should I be splitting up code segments from markdown or parsing the whole file?  Or glomming code segments under a certain size together?  How to aggregate child results if we go that way?
+    - Should labeled codefences be run on the corrospondent model or the global model?
 - Should I create a long feature vector of submodels, or a master model?

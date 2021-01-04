@@ -1,5 +1,7 @@
 from azureSDKTrackClassifier import Language
 
+import exdown
+
 # NOTE: This is a WIP as part of creating a generalized classifier, that attempts to do the proper per language and service detection as well as relevent content extraction.
 # This is less relevent if we decide to just treat everything as "raw text", or if we end up having no need for a layered/mosaic model.
 def _classify(text, name=None, service=None, language=None):
@@ -43,3 +45,6 @@ def _classify(text, name=None, service=None, language=None):
 
     # If sdk/language aren't specified, try to determine them.
     # If we know what they are with high confidence, use the targeted model, otherwise use a generic model. (Maybe run both anyhow and make sure they agree or mosaic)
+
+    all_text = '\n'.join([e[0] for e in targeted_content])
+    return all_text

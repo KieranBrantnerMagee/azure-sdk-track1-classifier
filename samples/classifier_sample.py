@@ -18,10 +18,22 @@ if __name__ == "__main__":
     #is_t1_classifier = AzureSDKTrackClassifier(Language.dotnet, None)
     #is_t1_classifier = AzureSDKTrackClassifier(Language.js, None)
     #is_t1_classifier = AzureSDKTrackClassifier(Language.java, None)
-    is_t1_classifier = AzureSDKTrackClassifier(None, None)
-    is_t1_classifier.save()
+    #is_t1_classifier = AzureSDKTrackClassifier(None, None)
+    #is_t1_classifier.save()
 
-    #is_t1_classifier = AzureSDKTrackClassifier.load('azureSDKTrackClassifier_None_None.model')
+    is_t1_classifier = AzureSDKTrackClassifier.load('azureSDKTrackClassifier_None_None.model')
+
+    from azureSDKTrackClassifier.classifierV2 import _extract_and_label_codefences
+    with open('./TestCorpus/uncategorized/dotnet_twilio_t2.txt') as f:
+        raw_text = f.read()
+        res = is_t1_classifier.is_t1_verbose(raw_text, True)
+        print(res)
+        print("=========================  CODEFENCE EXTRACTED =====================")
+        targeted_content = _extract_and_label_codefences(raw_text, 'dotnet_twilio.md')
+        text = '\n'.join([e[0] for e in targeted_content])
+        res = is_t1_classifier.is_t1_verbose(text, True)
+        print(res)
+    exit()
 
     #language = Language.java
     #language = Language.dotnet

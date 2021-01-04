@@ -48,7 +48,10 @@ class AzureSDKTrackClassifier: # Someone with more sense than me can rename this
         """ Saves the model to an azure storage blob.
             The file will be located at the container and path parameter if provided, otherwise, in the root of the container."""
         path = path or 'azureSDKTrackClassifier_{}_{}.model'.format(self._language, self._service)
-        service_client = BlobServiceClient.from_connection_string(conn_str=connection_string)
+        if 'sig=' in connection_string and 'AccountKey=' not in connection_string: # SAS signature.
+            service_client = BlobServiceClient(connection_string)
+        else:
+            service_client = BlobServiceClient.from_connection_string(conn_str=connection_string)
         try:
             service_client.create_container(container)
         except ResourceExistsError:
@@ -60,6 +63,9 @@ class AzureSDKTrackClassifier: # Someone with more sense than me can rename this
     @staticmethod
     def load_from_blob(connection_string:str, container:str, path:str) -> "AzureSDKTrackClassifier":
         """ Loads the model from an azure storage blob located at the specified path."""
-        service_client = BlobServiceClient.from_connection_string(conn_str=connection_string)
+        if 'sig=' in connection_string and 'AccountKey=' not in connection_string: # SAS signature.
+            service_client = BlobServiceClient(connection_string)
+        else:
+            service_client = BlobServiceClient.from_connection_string(conn_str=connection_string)
         blob_client = service_client.get_blob_client(container, path)
         return pickle.loads(blob_client.download_blob().content_as_bytes())

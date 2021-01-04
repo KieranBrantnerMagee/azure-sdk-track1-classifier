@@ -4,6 +4,7 @@ import io
 from io import BytesIO
 import json
 import logging
+import os
 import zipfile
 
 import enchant
@@ -11,6 +12,7 @@ import exdown
 import requests
 
 from .constants import Language, LANGUAGE_REPO_MAP
+from .settings import Settings
 from .tokenizers import tokenize_text, tokenize_apistubgen
 
 
@@ -84,7 +86,6 @@ def get_release_metadata(language:Language):
     return info
 
 
-CACHE_BASE="Z:\\scratch\\" # "." #TODO: Swap this back in.
 def get_corpus_for_package(repo:str, package:str, version:str, custom_repo_uri:str=None, use_cache:bool=True, use_raw_corpus_cache:bool=False) -> dict:
     """Fetches a dict of 'public interface code' files (samples, tests, readme, representative samples you'd see in public documentation) from a specified
     repo, package, and version. (for Azure SDK packages on github)."""
@@ -95,7 +96,7 @@ def get_corpus_for_package(repo:str, package:str, version:str, custom_repo_uri:s
         return {}
 
     if use_cache:
-        cache_name = CACHE_BASE + "trimmed_corpus_{}_{}_{}.cache".format(repo, package.replace('/', '_'), version) # The replace is for JS packages.
+        cache_name = os.path.join(Settings.CACHE_BASE_PATH, "trimmed_corpus_{}_{}_{}.cache".format(repo, package.replace('/', '_'), version)) # The replace is for JS packages.
         try:
             with open(cache_name, 'r') as f:
                 logging.getLogger(__name__).info("Found in trimmed cache {} {} {}".format(repo, package, version))
@@ -123,7 +124,7 @@ def get_corpus_for_package(repo:str, package:str, version:str, custom_repo_uri:s
     logging.getLogger(__name__).info("Fetching {} {} {}".format(repo, package, version))
     # So that in testing we don't take ages, cache intermediate results.
     if use_raw_corpus_cache:
-        raw_cache_name = CACHE_BASE + "corpus_{}_{}_{}.cache".format(repo, package.replace('/', '_'), version) # The replace is for JS packages.
+        raw_cache_name = os.path.join(Settings.CACHE_BASE_PATH, "corpus_{}_{}_{}.cache".format(repo, package.replace('/', '_'), version)) # The replace is for JS packages.
         try:
             with open(raw_cache_name, 'rb') as f:
                 version_zip = f.read()
@@ -136,7 +137,10 @@ def get_corpus_for_package(repo:str, package:str, version:str, custom_repo_uri:s
         version_zip = do_github_zip_request(package_zip_uri)
 
     if version_zip == b'404: Not Found': # This is a github-ism.
-        logging.getLogger(__name__).warning("No zip for URI: {}".format(package_zip_uri))
+        logging.getLogger(__name__).warning("No zip for URI: {} (repo: {} package: {} version: {})".format(package_zip_uri, repo, package, version))
+        if Settings.MISSING_TRAINING_LOG: # If desired, log missing corpuses to file for triage.
+            with open(Settings.MISSING_TRAINING_LOG, 'a') as f:
+                f.write("{}\t{}\t{}\t{}".format(package_zip_uri, repo, package, version))
         corpus = {}
     else:
         with zipfile.ZipFile(BytesIO(version_zip), 'r') as zf:
@@ -228,3 +232,14 @@ def get_corpus_files_tokens_and_versions_for_package(metadata:list) -> tuple:
                 versions.add(version_id.split('-')[0])
 
     return corpus_files, tokens, versions
+
+
+# Helper function used for parallelizing __main__ classifier evaluation.
+def run_multiproc_classifier(is_t1_classifier:"AzureSDKTrackClassifier", multi_text:dict, queue:"Queue", verbose:bool):
+    for path, text in multi_text.items():
+        if verbose:
+            result = is_t1_classifier.is_t1_verbose(text)
+        else:
+            result = is_t1_classifier.is_t1(text)
+        print("{}: {}".format(path, result))
+        queue.put((path, result))

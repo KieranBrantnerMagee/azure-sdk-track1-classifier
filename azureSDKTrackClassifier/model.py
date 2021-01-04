@@ -9,6 +9,7 @@ from sklearn.neural_network import MLPClassifier
 
 from .helpers import *
 from .constants import Language, LANGUAGE_REPO_MAP
+from .settings import Settings
 from .tokenizers import tokenize_apistubgen, tokenize_text
 
 # Contains the metadata produced by training to allow for classification.  Is the "heavy lifting" behind the public classifier API.
@@ -30,6 +31,8 @@ class _TrainedModel:
         found_old_versions = [v for v in self._only_old_versions if v in text]
         if verbose:
             logging.getLogger(__name__).info(f"\n new_versions: {found_new_versions}\n old_versions: {found_old_versions}\n found_new_tokens: {found_new_tokens}\n found_old_tokens: {found_old_tokens}\n")
+        else:
+            logging.getLogger(__name__).debug(f"\n new_versions: {found_new_versions}\n old_versions: {found_old_versions}\n found_new_tokens: {found_new_tokens}\n found_old_tokens: {found_old_tokens}\n")
         # In theory we might consider normalizing this by the text length too, but gut-feel is that'd cause more bias than fix. (since "Density of T1 code" may be highly variable)  NOTE: If using SVM, there's even more need to log-normalize.
         # Similarly, I provide both the absolute and relative lengths since it's not "True" normalization, a lib can be big but only have part of it used often.
         return [len(found_new_tokens),
@@ -113,7 +116,7 @@ def train_model(language : Language = None, service : str = None) -> _TrainedMod
             training_classes.append(label)
 
     # We want to include not only the "perfect examples" (corpus files) but real-world/ambiguous examples.
-    test_corpus_glob = './TestCorpus/*/*/*/*'
+    test_corpus_glob = os.path.join(Settings.TEST_CORPUS_BASE_PATH, '/TestCorpus/*/*/*/*')
     for file_path in glob.glob(test_corpus_glob, recursive=True):
         with open(file_path) as f:
             path_base, path_language, path_service, path_tier, file_name = os.path.normpath(file_path).split(os.sep)
