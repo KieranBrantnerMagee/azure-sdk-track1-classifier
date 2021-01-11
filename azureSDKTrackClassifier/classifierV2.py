@@ -36,9 +36,10 @@ def _classify(text:str, name:str=None, service:str=None, language:Language=None)
     if is_markdown(text, name):
         # Try to extract code blocks.
         targeted_content += _extract_and_label_codefences(text)
-        # If none, or if code blocks don't do anything, fall back to treating whole thing as text.  TODO: May want to refine this (e.g. don't run code-specific models on non-code)
-        if not targeted_content:
-            targeted_content.append((text, language, service))
+        #  TODO: May want to refine this (e.g. don't run code-specific models on non-code)
+        #  If none, or if code blocks don't do anything, fall back to treating whole thing as text.
+        # if not targeted_content:
+        #     targeted_content.append((text, language, service))
 
     # Treat as code as long as it's one of the languages we expect to deal with
     elif is_code(text, name):
