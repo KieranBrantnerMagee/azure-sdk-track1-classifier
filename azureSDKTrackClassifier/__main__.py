@@ -112,6 +112,11 @@ if __name__ == "__main__":
             text = '\n'.join([e[0] for e in extract_and_label_codefences(text)])
 
     # == Actually do classification ==
+    summary_result = {'t1_documents':0,'total_documents':0}
+    def increment_summary(result:dict):  # helper to keep track of state for printing a summary, mostly for multi-file classification.
+        summary_result['t1_documents'] += int(result['result'])
+        summary_result['total_documents'] += 1
+
     with numpy.errstate(divide='ignore'): # Disable the divide by zero warning that can sometimes be emitted by the model during prediction.
         # TODO: multiproc is almost never worth it unless you have truly huge #s of files.  Consider deprecating if that never becomes a use case, since it adds both this extra logic, the extra param, and the extra helper function.
         num_procs = args.set_parallelism
@@ -130,6 +135,7 @@ if __name__ == "__main__":
                     # Note: currently we do not use the result on this side of the process boundary, since printing it in the proc is both more immediate and sufficient.
                     # Leaving this here, however, in case we ever need to de-interlace or aggregate in some way.
                     res = result_queue.get(block=False)
+                    increment_summary(res[1])
                 except queue.Empty:
                     pass
                 for p in procs:
@@ -144,12 +150,14 @@ if __name__ == "__main__":
                     result = is_t1_classifier.is_t1_verbose(text)
                 else:
                     result = is_t1_classifier.is_t1(text)
+                increment_summary(result)
                 print("{}: {}".format(path, result))
         else: # Classify a single text block.
             if args.verbose:
                 result = is_t1_classifier.is_t1_verbose(text)
             else:
                 result = is_t1_classifier.is_t1(text)
+            increment_summary(result)
             print(result)
 
     # == Clean up ==
@@ -159,3 +167,7 @@ if __name__ == "__main__":
         CONN_STR = os.environ['AZURE_STORAGE_CONNECTION_STRING']
         CONTAINER = os.environ['AZURE_STORAGE_CONTAINER']
         is_t1_classifier.save_to_blob(CONN_STR, CONTAINER, args.save_to_blob)
+
+    if multi_text:
+        print(f"\nSummary of results: {summary_result}")
+    sys.exit(summary_result.get('t1_documents', 0))
