@@ -168,6 +168,5 @@ if __name__ == "__main__":
         CONTAINER = os.environ['AZURE_STORAGE_CONTAINER']
         is_t1_classifier.save_to_blob(CONN_STR, CONTAINER, args.save_to_blob)
 
-    if multi_text:
-        print(f"\nSummary of results: {summary_result}")
+    print(f"\nSummary of results: {summary_result}") #TODO: put behind a flag.  Spurious for single-file scenario.
     sys.exit(summary_result.get('t1_documents', 0))
