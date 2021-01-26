@@ -8,6 +8,7 @@ import os
 import queue
 import sys
 import zipfile
+import json
 
 import numpy
 import requests
@@ -167,5 +168,5 @@ if __name__ == "__main__":
         CONTAINER = os.environ['AZURE_STORAGE_CONTAINER']
         is_t1_classifier.save_to_blob(CONN_STR, CONTAINER, args.save_to_blob)
 
-    print(f"{summary_result}")
+    print(f"{json.dumps(summary_result)}")
     sys.exit(summary_result.get('t1_documents', 0))
