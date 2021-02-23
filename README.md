@@ -98,6 +98,8 @@ Contains APIStubgen files named in the format of {language}_{service}_{version}.
 
 ## TODO:
 
+-! check that js stubgen takes just the files.
+
 - is there any way to make model training incremental. (I wonder if we can do a token blacklist, since a lot of the issue is old false positive.)
 
 -? low-signal denoising (Get bigger corpus of low threshold items, then upsample the hell out of them in model training.) (May also be interesting to make a cutoff on low-signal items in unsupervised corpus; e.g. "must be seen >once"; although this may drastically lower signal as well.)
