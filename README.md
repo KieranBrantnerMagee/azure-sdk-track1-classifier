@@ -94,7 +94,7 @@ Contains APIStubgen files named in the format of {language}_{service}_{version}.
 
 - Enable logging on the command line via `--log-level debug` (or at the desired level)
 - Enable logging in your calling program via `logging.basicConfig(level=logging.INFO)`
-- > Note: Numpy SHOULD NOT be at 19.4, it breaks windows.
+- > Note: Numpy SHOULD NOT be at 19.4, it breaks some versions of windows.
 
 ## TODO:
 

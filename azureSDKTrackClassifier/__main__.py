@@ -42,6 +42,8 @@ if __name__ == "__main__":
     parser.add_argument('--set-parallelism', type=int, default=1, help='This option specifies the degree of parallelism (number of processes) to use when performing classification.  Default is no parallelism. (1 process, this script)  Warning: Not advised to use because of process start time overhead unless you have MANY (hundreds) files to parse.')
     parser.add_argument('--obey-code-fences', default=False, action='store_true', help='This option causes the classifier to try and examine only codefenced blocks.  If none exists, runs on the whole file.')
 
+    parser.add_argument('--api-view-generation-uri', type=str, default=None, help='This option allows generation of apiview token files on the fly for better SDK tokenization, by calling into an apiview service instance and tokenizing the needed packages on demand.  Credentials must be provided via the environment variables: API_VIEW_API_KEY, API_VIEW_COSMOS_CONNECTION_STRING and API_VIEW_STORAGE_CONNECTION_STRING. (see azureSDKTrackClassifier/apiStubGen/README.MD for a description of what these are.)')
+
     args = parser.parse_args()
 
     # == Prepare settings ==
@@ -56,6 +58,8 @@ if __name__ == "__main__":
         Settings.MISSING_TRAINING_LOG = args.log_missing_training_to_file
         with open(Settings.MISSING_TRAINING_LOG, 'w') as f: # Truncate log file for this run.
             f.write("package_zip_uri\trepo\tpackage\tversion") # Write headers for the file (CSV? might as well.)
+    if args.api_view_generation_uri:
+        Settings.API_VIEW_GENERATION_URI = args.api_view_generation_uri
 
     if args.load_from_file:
         is_t1_classifier = AzureSDKTrackClassifier.load(args.load_from_file)

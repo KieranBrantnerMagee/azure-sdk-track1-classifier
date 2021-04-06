@@ -72,7 +72,7 @@ def do_github_zip_request(zip_uri):
         version_zip = requests.get(zip_uri.replace('master.zip', 'main.zip')).content
     return version_zip
 
-def locate_and_fetch_github_repo_zip_and_subpath(repo:str, package:str, version:str, custom_repo_uri:str=None, use_raw_corpus_cache:bool=False) -> Tuple(bytes, str): # returns the zip in bytes, and if needed, the custom subpath to look under within it.
+def locate_and_fetch_github_repo_zip_and_subpath(repo:str, package:str, version:str, custom_repo_uri:str=None, use_raw_corpus_cache:bool=False) -> Tuple[bytes, str]: # returns the zip in bytes, and if needed, the custom subpath to look under within it.
     package_zip_uri = "https://github.com/Azure/{}/archive/{}_{}.zip".format(repo, package, version)
     if custom_repo_uri == 'NA':
         custom_repo_uri = None
@@ -203,7 +203,7 @@ def get_zip_uri_and_subpath_from_github_link(custom_repo_uri:str)->tuple:
     return package_zip_uri, custom_subpath
 
 # Experimental feature to perform stub-generation on the fly by requesting it from a stub gen server.
-FETCH_AND_BACKFILL_MISSING_STUBGEN=False
+FETCH_AND_BACKFILL_MISSING_STUBGEN=True
 def get_apistubgen_tokens_for_package(language:Language, package:str, version:str, group_id:str, custom_repo_uri:str) -> set:
     language = Language(language)
     # This requires an apistubgen file to be generated and named properly to be picked up.
@@ -212,7 +212,8 @@ def get_apistubgen_tokens_for_package(language:Language, package:str, version:st
             logging.getLogger(__name__).info("Found apistubgen file for {} {} {};".format(language, package, version))
             return set([token for token_list in tokenize_apistubgen(json.loads(f.read())).values() for token in token_list])
     except IOError:
-        if FETCH_AND_BACKFILL_MISSING_STUBGEN:
+        if FETCH_AND_BACKFILL_MISSING_STUBGEN and Settings.API_VIEW_GENERATION_URI:
+            logging.getLogger(__name__).info("Generating apistubgen file for {} {} {};".format(language, package, version))
             # First, get the actual package.
             if language == Language.dotnet: #TODO: The various "per-language" functionality should be consolidated one place to make it easy to add new languages.
                 package = requests.get(f"https://www.nuget.org/api/v2/package/{package}/{version}").content
@@ -221,11 +222,24 @@ def get_apistubgen_tokens_for_package(language:Language, package:str, version:st
             elif language == Language.python:
                 packages_page = requests.get(f"https://pypi.org/project/{package}/{version}/#files")
                 package_uri = re.findall("(http[^\>]+\.whl)", packages_page.text)[0]
+
                 package = requests.get(package_uri).content
             elif language == Language.java:
                 group_id = group_id.replace('.', '/')
                 package = requests.get(f"https://search.maven.org/remotecontent?filepath={group_id}/{package}/{version}/{package}-{version}-sources.jar").content
+
             # TODO: Pass the package to the apistubgen endpoint to have it be processed, save the result to the location specified here, then return the parsed token set.
+            from .apiStubGen.create_review import create_review
+            stub_json_path = create_review(package,
+                                           Settings.API_VIEW_GENERATION_URI,
+                                           os.environ['API_VIEW_API_KEY'],
+                                           os.environ['API_VIEW_COSMOS_CONNECTION_STRING'],
+                                           os.environ['API_VIEW_STORAGE_CONNECTION_STRING'],
+                                           "./ApiStubGen/",
+                                           "{}_{}_{}.json".format(language.value, package, version))
+            with open(stub_json_path) as f:
+                logging.getLogger(__name__).info("Successfully generated apistubgen file for {} {} {};".format(language, package, version))
+                return set([token for token_list in tokenize_apistubgen(json.loads(f.read())).values() for token in token_list])
         else:
             return set()
 

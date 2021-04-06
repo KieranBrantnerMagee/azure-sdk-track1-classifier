@@ -12,14 +12,20 @@ if __name__ == "__main__":
     #is_t1_classifier = AzureSDKTrackClassifier(Language.java, "Storage")
     #is_t1_classifier = AzureSDKTrackClassifier(Language.dotnet, "ServiceBus")
     #is_t1_classifier = AzureSDKTrackClassifier(Language.java, "ServiceBus")
-    #is_t1_classifier = AzureSDKTrackClassifier(Language.dotnet, "EventHubs")
-    #is_t1_classifier.save()
+    os.environ["API_VIEW_API_KEY"]=''
+    os.environ["API_VIEW_COSMOS_CONNECTION_STRING"]=''
+    os.environ["API_VIEW_STORAGE_CONNECTION_STRING"]=''
+    from azureSDKTrackClassifier.settings import Settings
+    Settings.API_VIEW_GENERATION_URI = 'https://packageindexapiview.azurewebsites.net/AutoReview/UploadAutoReview?language=All&closed=false&automatic=true'
+    is_t1_classifier = AzureSDKTrackClassifier(Language.dotnet, "EventHubs")
+    is_t1_classifier.save()
     #is_t1_classifier = AzureSDKTrackClassifier(Language.java, "EventHubs")
     #is_t1_classifier = AzureSDKTrackClassifier(Language.dotnet, None)
     #is_t1_classifier = AzureSDKTrackClassifier(Language.js, None)
     #is_t1_classifier = AzureSDKTrackClassifier(Language.java, None)
     #is_t1_classifier = AzureSDKTrackClassifier(None, None)
     #is_t1_classifier.save()
+    exit()
 
     is_t1_classifier = AzureSDKTrackClassifier.load('azureSDKTrackClassifier_None_None.model')
 

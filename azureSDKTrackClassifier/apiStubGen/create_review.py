@@ -51,17 +51,41 @@ def get_blob_contents(container_client, blob_name):
      
 
 # Download blob
-def download_blob(revision_id, file_id, connection_string, out_path):
+def download_blob(revision_id, file_id, connection_string, out_path, out_filename_override=None):
     blob_service_client = BlobServiceClient.from_connection_string(connection_string)
     container_client = blob_service_client.get_container_client(STORAGE_FILE_CONTAINER)
     blob_name = revision_id + "/" + file_id
     contents = get_blob_contents(container_client, blob_name)
-    filePath = os.path.join(out_path, file_id+".json")
+    filePath = os.path.join(out_path, out_filename_override or (file_id+".json"))
     f = open(filePath, "w")
     f.write(contents)
     f.close()
-    print("Token file is downloaded to {}".format(filePath))
-    return
+    logging.getLogger(__name__).info("Token file is downloaded to {}".format(filePath))
+    return filePath
+
+
+def create_review(file_to_upload_bytes, api_view_uri, api_view_api_key, cosmos_db_conn_str, storage_conn_str, output_directory, out_filename_override=None):
+    #url='http://localhost:5000/AutoReview/UploadAutoReview'
+    files = {'file': file_to_upload_bytes}
+    values = {'label': 'Test'}
+    headers = {'ApiKey': api_view_api_key}
+    r = requests.post(api_view_uri, files=files, data=values, headers=headers)
+    logging.getLogger(__name__).info((r.status_code, r.text)
+    if r.status_code == 201:
+        logging.getLogger(__name__).info("API Review created with link {}".format(r.text))
+    else:
+        logging.getLogger(__name__).error("Failed to create review")
+        sys.exit(1)
+
+    review_id = r.text.split("/")[-1]
+    logging.getLogger(__name__).info("Review ID is {}".format(review_id))
+    revision_id, file_id = get_review_details(review_id, cosmos_db_conn_str)
+    if revision_id and file_id:
+        logging.getLogger(__name__).info(revision_id, file_id)
+        return download_blob(revision_id, file_id, storage_conn_str, output_directory, out_filename_override)
+    else:
+        logging.getLogger(__name__).error("Review revision and/or File id are not available for review {}".format(review_id))
+        sys.exit(1)
 
 
 if __name__ == "__main__":
@@ -110,26 +134,6 @@ if __name__ == "__main__":
     )
 
     args = parser.parse_args()
+    create_review(open(args.pkg_path, 'rb'), args.api_uri, args.apikey, args.cosmos_cs, args.storage_cs, args.out_path)
 
-    #url='http://localhost:5000/AutoReview/UploadAutoReview'
-    files = {'file': open(args.pkg_path, 'rb')}
-    values = {'label': 'Test'}
-    headers = {'ApiKey': args.apikey}
-    r = requests.post(args.api_uri, files=files, data=values, headers=headers)
-    print(r.status_code, r.text)
-    if r.status_code == 201:
-        print("API Review created with link {}".format(r.text))
-    else:
-        print("Failed to create review")
-        sys.exit(1)
-
-    review_id = r.text.split("/")[-1]
-    print("Review ID is {}".format(review_id))
-    revision_id, file_id = get_review_details(review_id, args.cosmos_cs)
-    if revision_id and file_id:
-        print(revision_id, file_id)
-        download_blob(revision_id, file_id, args.storage_cs, args.out_path)
-    else:
-        print("Review revision and/or File id are not available for review {}".format(review_id))
-        sys.exit(1)
 

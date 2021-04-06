@@ -5,3 +5,4 @@ scikit-learn==0.23.2
 pyenchant==3.1.1
 azure-storage-blob==12.6.0
 numpy==1.19.3
+-r azureSdkTrackClassifier/apiStubGen/requirements.txt
